@@ -264,9 +264,9 @@
   </main>
   <div class="controls">
     <button id="btnPrev" type="button">⏮<small>Song</small></button>
-    <button id="btnBack" type="button">−10<small>Sek.</small></button>
+    <button id="btnBack" type="button">◀<small>Abschnitt</small></button>
     <button id="btnPlay" type="button">Start</button>
-    <button id="btnFwd" type="button">+10<small>Sek.</small></button>
+    <button id="btnFwd" type="button">▶<small>Abschnitt</small></button>
     <button id="btnNext" type="button">⏭<small>Song</small></button>
     <button id="btnList" type="button">☰<small>Liste</small></button>
   </div>
@@ -322,8 +322,8 @@ const EXAMPLE = `Titel: Mein Plan
 
 const PLAN_KEY = 'cycling-musik:plan';
 const POS_KEY = 'cycling-musik:pos';
-const SKIP = 10;
 const RESTART_WINDOW = 3;
+const DOUBLE_TAP = 400;
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -602,6 +602,29 @@ function nextSong() {
   act('Nächster Song', () => loadSong(state.idx + 1, 0, isPlaying()));
 }
 
+// Abschnitte über Songgrenzen hinweg, als Index in plan.flat
+function phaseIndex() {
+  const k = cueIndex(state.plan.songs[state.idx], songTime());
+  return state.plan.flat.findIndex(p => p.song === state.idx && p.k === k);
+}
+
+function goPhase(g) {
+  const p = state.plan.flat[g];
+  act(p.name || 'Abschnitt', () => (p.song === state.idx ? seek(p.at) : loadSong(p.song, p.at, isPlaying())));
+}
+
+// Wie in der Timer-Ansicht: erst den Abschnitt neu, in seinen ersten Sekunden zum vorigen
+function prevPhase() {
+  const g = phaseIndex();
+  if (songTime() - state.plan.flat[g].at > RESTART_WINDOW || g === 0) goPhase(g);
+  else goPhase(g - 1);
+}
+
+function nextPhase() {
+  const g = phaseIndex();
+  if (g + 1 < state.plan.flat.length) goPhase(g + 1);
+}
+
 function jump(i, at) {
   act(`Sprung zu ${fmt(at)}`, () => (i === state.idx ? seek(at) : loadSong(i, at, isPlaying())));
 }
@@ -815,8 +838,17 @@ function openList() {
     b.innerHTML = '<span class="n"></span><span class="t"></span>';
     b.querySelector('.n').textContent = i + 1;
     b.querySelector('.t').textContent = s.title;
-    // Song antippen zielt nur grob: rechts zu seinen Abschnitten scrollen
+    // Song antippen zielt nur grob: rechts zu seinen Abschnitten scrollen.
+    // Doppeltipp springt an den ersten Abschnitt des Songs.
+    let lastTap = 0;
     b.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastTap < DOUBLE_TAP) {
+        $('list').classList.remove('open');
+        jump(i, s.cues[0].at);
+        return;
+      }
+      lastTap = now;
       const h = $('listItems').querySelector(`h3[data-song="${i}"]`);
       $('listItems').scrollTo({ top: h.offsetTop, behavior: 'smooth' });
     });
@@ -864,9 +896,9 @@ $('track').addEventListener('click', e => {
 });
 
 $('btnPrev').addEventListener('click', prevSong);
-$('btnBack').addEventListener('click', () => act('−10 Sek.', () => seek(songTime() - SKIP)));
+$('btnBack').addEventListener('click', prevPhase);
 $('btnPlay').addEventListener('click', togglePlay);
-$('btnFwd').addEventListener('click', () => act('+10 Sek.', () => seek(songTime() + SKIP)));
+$('btnFwd').addEventListener('click', nextPhase);
 $('btnNext').addEventListener('click', nextSong);
 $('btnList').addEventListener('click', openList);
 $('listClose').addEventListener('click', () => $('list').classList.remove('open'));
