@@ -44,7 +44,7 @@
   #app {
     height: 100%;
     display: grid;
-    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-rows: auto auto 1fr auto;
     padding: 1vh 1.5vw;
     gap: 1.2vh;
   }
@@ -99,29 +99,36 @@
     gap: 3vw;
     min-height: 0;
   }
-  .seg { min-width: 0; }
-  .seg .name {
-    font-size: clamp(32px, 11vh, 130px);
-    font-weight: 800; line-height: 1.05;
-    color: var(--zone);
-    overflow-wrap: anywhere;
+  /* Abschnitte: voriger ausgegraut, aktiver groß, die nächsten gedimmt */
+  .phases { min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 1.4vh; overflow: hidden; }
+  .ph {
+    display: grid; grid-template-columns: clamp(56px, 9vh, 96px) minmax(0, 1fr); gap: .6em; align-items: baseline;
+    border-left: 10px solid var(--z, var(--line)); padding-left: .6em;
+    font-size: clamp(16px, 3.8vh, 38px);
+    opacity: .55;
   }
-  .seg .details {
-    margin-top: 1.2vh;
-    font-size: clamp(20px, 5vh, 60px);
-    font-weight: 600; line-height: 1.2;
+  .ph .at { font-variant-numeric: tabular-nums; color: var(--muted); font-size: clamp(16px, 3.8vh, 38px); }
+  .ph .body { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ph .sg { font-size: .6em; color: var(--muted); }
+  .ph .nm { font-weight: 700; }
+  .ph .d { color: var(--muted); font-weight: 500; }
+  .ph.prev { opacity: .3; }
+  .ph.none { visibility: hidden; }
+  .ph.cur { opacity: 1; border-left-width: 16px; margin: .6vh 0; }
+  .ph.cur .body { white-space: normal; }
+  .ph.cur .nm {
+    display: inline-block;
+    font-size: clamp(32px, 10vh, 120px); font-weight: 800; line-height: 1.05;
+    color: var(--zone); overflow-wrap: anywhere;
   }
-  .seg .details div + div { margin-top: .25em; }
-  body.count .seg .name { color: var(--bg); background: var(--text); display: inline-block; padding: 0 .25em; border-radius: 12px; }
+  .ph.cur.count .nm { color: var(--bg); background: var(--text); padding: 0 .25em; border-radius: 12px; }
+  .ph.cur .d { display: block; font-size: clamp(20px, 4.6vh, 56px); font-weight: 600; color: var(--text); line-height: 1.2; }
   .clock {
     font-variant-numeric: tabular-nums;
     font-size: clamp(64px, min(24vh, 22vw), 300px);
     font-weight: 800; line-height: 1;
     letter-spacing: -.02em;
   }
-  body.warn .clock { color: var(--warn); }
-  body.final .clock { color: var(--hot); animation: pulse 1s steps(2) infinite; }
-  @keyframes pulse { 50% { opacity: .35; } }
 
   .pause-badge {
     position: absolute; right: 0; top: 0;
@@ -132,14 +139,6 @@
   }
   body.paused .pause-badge { display: block; }
   body.paused .clock { opacity: .5; }
-
-  .nextline {
-    display: flex; gap: 1.5vw; align-items: baseline;
-    font-size: clamp(16px, 3.8vh, 40px);
-    color: var(--muted);
-    white-space: nowrap; overflow: hidden;
-  }
-  .nextline .next { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 
   .controls {
     display: grid;
@@ -157,7 +156,7 @@
 
   #empty { display: none; font-size: clamp(20px, 4vh, 40px); color: var(--muted); }
   body.noplan #empty { display: block; }
-  body.noplan main, body.noplan .song, body.noplan .nextline, body.noplan .controls { visibility: hidden; }
+  body.noplan main, body.noplan .song, body.noplan .controls { visibility: hidden; }
 
   #toast {
     position: fixed; left: 50%; top: 12vh; transform: translateX(-50%);
@@ -249,16 +248,9 @@
   </div>
   <main>
     <div class="pause-badge">PAUSE</div>
-    <div class="seg">
-      <div class="name" id="name"></div>
-      <div class="details" id="details"></div>
-    </div>
+    <div class="phases" id="phases"></div>
     <div class="clock" id="clock">0:00</div>
   </main>
-  <div class="nextline">
-    <span id="nextLabel">Danach:</span>
-    <span class="next" id="next"></span>
-  </div>
   <div class="controls">
     <button id="btnUndo" type="button">↶<small>rückgängig</small></button>
     <button id="btnPrev" type="button">⏮<small>Song</small></button>
@@ -377,7 +369,8 @@ function parsePlan(text) {
     else s.key = s.yt;
   }
   if (!songs.length && !errors.length) errors.push('Der Plan enthält keinen Song.');
-  return { title, songs, errors };
+  const flat = songs.flatMap((s, i) => s.cues.map((c, k) => ({ ...c, song: i, k })));
+  return { title, songs, flat, errors };
 }
 
 function fmt(sec, up) {
@@ -648,6 +641,47 @@ function renderTrack(song, dur, k, t) {
   $('head').style.left = `${Math.min(100, 100 * t / dur)}%`;
 }
 
+const NEXT_PHASES = 3;
+let phasesKey = '';
+function renderPhases(k) {
+  const { flat, songs } = state.plan;
+  const g = flat.findIndex(p => p.song === state.idx && p.k === k);
+  if (phasesKey === String(g)) return;
+  phasesKey = String(g);
+  const rows = [];
+  for (let j = g - 1; j <= g + NEXT_PHASES; j++) {
+    const p = flat[j];
+    const row = document.createElement('div');
+    row.className = `ph ${j < g ? 'prev' : j === g ? 'cur' : 'next'}`;
+    if (!p) {
+      // Platzhalter, damit der aktive Abschnitt nicht springt
+      row.innerHTML = '<span class="at"></span><div class="body"><span class="nm"></span></div>';
+      if (j < g) row.classList.add('none'); else row.querySelector('.nm').textContent = 'Ende';
+      rows.push(row);
+      if (j > g) break;
+      continue;
+    }
+    if (p.count) row.classList.add('count');
+    if (p.zone) row.style.setProperty('--z', `var(--${p.zone})`);
+    row.innerHTML = '<span class="at"></span><div class="body"></div>';
+    row.querySelector('.at').textContent = fmt(p.at);
+    const body = row.querySelector('.body');
+    // Songwechsel nur an der ersten Zeile eines anderen Songs anzeigen
+    const before = j < g ? state.idx : flat[j - 1].song;
+    if (p.song !== state.idx && p.song !== before) {
+      body.append(Object.assign(document.createElement('div'), { className: 'sg', textContent: `Song ${p.song + 1}: ${songs[p.song].title}` }));
+    }
+    body.append(Object.assign(document.createElement('span'), { className: 'nm', textContent: p.name }));
+    if (j === g) {
+      p.details.forEach(d => body.append(Object.assign(document.createElement('span'), { className: 'd', textContent: d })));
+    } else if (p.details.length) {
+      body.append(Object.assign(document.createElement('span'), { className: 'd', textContent: ` · ${p.details.join(' · ')}` }));
+    }
+    rows.push(row);
+  }
+  $('phases').replaceChildren(...rows);
+}
+
 function render() {
   const { plan } = state;
   document.body.classList.toggle('noplan', !plan);
@@ -658,6 +692,7 @@ function render() {
   const k = cueIndex(song, t);
   const cue = song.cues[k];
   const nextCue = song.cues[k + 1];
+  // bis zum nächsten Wechsel, steuert die Vorwarnung über den Hintergrund
   const left = (nextCue ? nextCue.at : dur) - t;
   const playing = isPlaying();
 
@@ -668,25 +703,12 @@ function render() {
   $('pos').textContent = `Song ${state.idx + 1}/${plan.songs.length}`;
   $('total').textContent = `noch ${fmt(rest)}`;
   $('songName').textContent = song.title;
-  $('songTime').textContent = `${fmt(t)} / ${fmt(dur)}`;
+  $('songTime').textContent = `−${fmt(dur - t, true)}`;
   $('src').textContent = state.kind === 'local' ? 'lokal' : state.kind === 'yt' ? 'YouTube' : 'kein Ton';
   renderTrack(song, dur, k, t);
 
-  $('name').textContent = cue.name;
-  $('details').replaceChildren(...cue.details.map(d => Object.assign(document.createElement('div'), { textContent: d })));
-  $('clock').textContent = fmt(left, true);
-
-  if (nextCue) {
-    $('nextLabel').textContent = `Bei ${fmt(nextCue.at)}:`;
-    $('next').textContent = [nextCue.name, ...nextCue.details].join(' · ');
-  } else if (plan.songs[state.idx + 1]) {
-    const ns = plan.songs[state.idx + 1];
-    $('nextLabel').textContent = 'Nächster Song:';
-    $('next').textContent = `${ns.title} · ${[ns.cues[0].name, ...ns.cues[0].details].join(' · ')}`;
-  } else {
-    $('nextLabel').textContent = 'Danach:';
-    $('next').textContent = 'Ende';
-  }
+  $('clock').textContent = fmt(t);
+  renderPhases(k);
 
   $('btnPlay').textContent = playing ? 'Pause' : 'Start';
   $('btnUndo').disabled = undoStack.length === 0;
@@ -731,6 +753,7 @@ function load(text, resume) {
   state.text = text;
   undoStack.length = 0;
   trackKey = '';
+  phasesKey = '';
   store.set(PLAN_KEY, text);
   let pos = null;
   try { pos = JSON.parse(store.get(POS_KEY)); } catch (e) {}
