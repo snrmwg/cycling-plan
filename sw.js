@@ -2,7 +2,7 @@
 // Eine neue Version ist damit beim übernächsten Start aktiv.
 // Geladen wird am HTTP-Cache vorbei: GitHub Pages erlaubt 10 Minuten
 // Zwischenspeicher, sonst landet eine veraltete Kopie im Offline-Cache.
-const CACHE = 'cycling-plan-v9';
+const CACHE = 'cycling-plan-v10';
 const FILES = ['./', 'index.html', 'musik.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
