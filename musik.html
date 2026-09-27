@@ -324,6 +324,7 @@ const PLAN_KEY = 'cycling-musik:plan';
 const POS_KEY = 'cycling-musik:pos';
 const SKIP = 10;
 const RESTART_WINDOW = 3;
+const DOUBLE_TAP = 400;
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -815,8 +816,17 @@ function openList() {
     b.innerHTML = '<span class="n"></span><span class="t"></span>';
     b.querySelector('.n').textContent = i + 1;
     b.querySelector('.t').textContent = s.title;
-    // Song antippen zielt nur grob: rechts zu seinen Abschnitten scrollen
+    // Song antippen zielt nur grob: rechts zu seinen Abschnitten scrollen.
+    // Doppeltipp springt an den ersten Abschnitt des Songs.
+    let lastTap = 0;
     b.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastTap < DOUBLE_TAP) {
+        $('list').classList.remove('open');
+        jump(i, s.cues[0].at);
+        return;
+      }
+      lastTap = now;
       const h = $('listItems').querySelector(`h3[data-song="${i}"]`);
       $('listItems').scrollTo({ top: h.offsetTop, behavior: 'smooth' });
     });
