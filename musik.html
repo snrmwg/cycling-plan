@@ -182,7 +182,18 @@
   .overlay .row h2 { margin: 0 0 0 1vw; font-size: 24px; flex: 1; }
   .overlay .info { color: var(--muted); font-size: 18px; }
 
-  .items { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 2vh; }
+  /* Sprungliste: links Songs zum groben Zielen, rechts die Abschnitte; beide Spalten laufen mit */
+  .split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 1.5vw; }
+  .songcol { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 2vh; }
+  .songcol button {
+    min-height: 72px; flex-shrink: 0;
+    display: grid; grid-template-columns: 2em 1fr; gap: .6em; align-items: center;
+    text-align: left; padding: 0 1em; font-size: clamp(18px, 3vh, 28px);
+  }
+  .songcol button .n { color: var(--muted); }
+  .songcol button.playing .n { color: var(--accent); font-weight: 800; }
+  .songcol button.active { border-color: var(--accent); background: #1e2833; }
+  .items { position: relative; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 60vh; }
   .items h3 { margin: 1.5vh 0 .3vh; font-size: clamp(18px, 3vh, 28px); }
   .items h3.current { color: var(--accent); }
   .items button {
@@ -269,7 +280,10 @@
     <button id="listClose" type="button">Schließen</button>
     <h2>Springen zu …</h2>
   </div>
-  <div class="items" id="listItems"></div>
+  <div class="split">
+    <div class="songcol" id="listSongs"></div>
+    <div class="items" id="listItems"></div>
+  </div>
 </div>
 
 <div id="songs" class="overlay">
@@ -777,6 +791,7 @@ function openList() {
   state.plan.songs.forEach((s, i) => {
     const h = document.createElement('h3');
     h.textContent = `${i + 1}. ${s.title}`;
+    h.dataset.song = i;
     if (i === state.idx) h.className = 'current';
     items.push(h);
     const k = i === state.idx ? cueIndex(s, songTime()) : -1;
@@ -793,10 +808,37 @@ function openList() {
       items.push(b);
     });
   });
+  const songs = state.plan.songs.map((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    if (i === state.idx) b.classList.add('playing');
+    b.innerHTML = '<span class="n"></span><span class="t"></span>';
+    b.querySelector('.n').textContent = i + 1;
+    b.querySelector('.t').textContent = s.title;
+    // Song antippen zielt nur grob: rechts zu seinen Abschnitten scrollen
+    b.addEventListener('click', () => {
+      const h = $('listItems').querySelector(`h3[data-song="${i}"]`);
+      $('listItems').scrollTo({ top: h.offsetTop, behavior: 'smooth' });
+    });
+    return b;
+  });
+  $('listSongs').replaceChildren(...songs);
   $('listItems').replaceChildren(...items);
   $('list').classList.add('open');
-  $('listItems').querySelector('h3.current')?.scrollIntoView({ block: 'start' });
+  $('listItems').scrollTop = $('listItems').querySelector('h3.current')?.offsetTop || 0;
+  syncListSongs();
 }
+
+// Links den Song markieren, dessen Abschnitte rechts gerade oben stehen
+function syncListSongs() {
+  const top = $('listItems').scrollTop + 8;
+  let cur = 0;
+  for (const h of $('listItems').querySelectorAll('h3')) if (h.offsetTop <= top) cur = Number(h.dataset.song);
+  const btns = $('listSongs').children;
+  for (let i = 0; i < btns.length; i++) btns[i].classList.toggle('active', i === cur);
+  btns[cur]?.scrollIntoView({ block: 'nearest' });
+}
+$('listItems').addEventListener('scroll', syncListSongs);
 
 function renderSongs() {
   const rows = (state.plan?.songs || []).map((s, i) => {
