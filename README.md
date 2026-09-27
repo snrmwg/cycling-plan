@@ -41,7 +41,16 @@ Den Plan kann man in Markor als `.txt` schreiben und über „Plan > Datei öffn
 
 ## Musik-Modus (`musik.html`)
 
-Die Seite spielt die Musik selbst ab. Die Zeit im Song ist die einzige Uhr: Pause, Spulen und Songwechsel wirken auf Musik und Choreo zugleich. Oben ein Songverlauf wie in einer Musik-App mit den Choreo-Abschnitten als Farbfelder, darunter groß der aktuelle Abschnitt und der Countdown bis zum nächsten Wechsel. Tipp auf den Songverlauf springt dorthin. Erreichbar über „Musik“ in der Timer-Ansicht.
+Die Seite spielt die Musik selbst ab. Die Zeit im Song ist die einzige Uhr: Pause, Spulen und Songwechsel wirken auf Musik und Choreo zugleich. Erreichbar über „Musik“ in der Timer-Ansicht.
+
+Oben ein Songverlauf wie in einer Musik-App mit den Choreo-Abschnitten als Farbfelder und der Restzeit des Songs; ein Tipp darauf springt dorthin. Darunter die Abschnitte: der vorige ausgegraut, der aktive groß, die nächsten drei gedimmt, jeweils mit Zeit im Song. Rechts groß die abgelaufene Zeit im Song. 10 und 3 Sekunden vor einem Wechsel färbt sich der Hintergrund gelb bzw. rot.
+
+| Taste | Wirkung |
+|---|---|
+| ⏮ / ⏭ Song | Song von vorn (in den ersten 3 Sekunden: voriger Song) / nächster Song |
+| ◀ / ▶ Abschnitt | Abschnitt von vorn (in den ersten 3 Sekunden: voriger Abschnitt) / nächster Abschnitt |
+| Start / Pause | Musik und Choreo zugleich |
+| ☰ Liste | links Songs, rechts Abschnitte; Tipp auf einen Song scrollt zu seinen Abschnitten, Doppeltipp springt an seinen Anfang, Tipp auf einen Abschnitt springt dorthin |
 
 Planformat: pro Song eine Kopfzeile, darunter Zeitmarken im Song, wie sie in der Choreo stehen.
 
