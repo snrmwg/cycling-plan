@@ -12,6 +12,7 @@
   :root {
     --bg: #0b0d10;
     --panel: #151a20;
+    --line: #2a323c;
     --text: #f2f4f7;
     --muted: #8a94a3;
     --accent: #3fb6ff;
@@ -23,6 +24,7 @@
     --z4: #ffb020;
     --z5: #ff4d4d;
     --zone: var(--accent);
+    --btn-h: clamp(72px, 13vh, 120px);
   }
   * { box-sizing: border-box; }
   html, body {
@@ -32,6 +34,7 @@
     -webkit-user-select: none; user-select: none;
     -webkit-tap-highlight-color: transparent;
     overflow: hidden;
+    touch-action: manipulation;
   }
   body.warn { --bg: #1d1605; }
   body.final { --bg: #2a0b0b; }
@@ -40,24 +43,29 @@
   #app {
     height: 100%;
     display: grid;
-    grid-template-rows: auto 1fr auto auto;
-    padding: 1.2vh 2vw;
-    gap: 1.2vh;
+    grid-template-rows: auto 1fr auto auto auto;
+    padding: 1vh 1.5vw;
+    gap: 1vh;
   }
 
   header {
-    display: flex; align-items: center; gap: 2vw;
-    font-size: clamp(14px, 2.6vh, 28px);
+    display: flex; align-items: center; gap: 1.5vw;
+    font-size: clamp(14px, 2.6vh, 26px);
     color: var(--muted);
   }
   header .title { color: var(--text); font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  header button {
+  header button { min-height: 52px; padding: 0 1em; font-size: inherit; }
+
+  button {
     font: inherit; color: var(--text);
-    background: var(--panel); border: 1px solid #2a323c; border-radius: 8px;
-    padding: .3em .8em;
+    background: var(--panel); border: 2px solid var(--line); border-radius: 14px;
+    cursor: pointer;
   }
+  button:active { background: #243040; }
+  button:disabled { opacity: .3; }
 
   main {
+    position: relative;
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
@@ -66,20 +74,20 @@
   }
   .seg { min-width: 0; }
   .seg .name {
-    font-size: clamp(32px, 11vh, 140px);
+    font-size: clamp(32px, 10vh, 120px);
     font-weight: 800; line-height: 1.05;
     color: var(--zone);
     overflow-wrap: anywhere;
   }
   .seg .details {
-    margin-top: 1.5vh;
-    font-size: clamp(20px, 6vh, 72px);
+    margin-top: 1.2vh;
+    font-size: clamp(20px, 5.5vh, 64px);
     font-weight: 600; line-height: 1.2;
   }
-  .seg .details div + div { margin-top: .3em; }
+  .seg .details div + div { margin-top: .25em; }
   .clock {
     font-variant-numeric: tabular-nums;
-    font-size: clamp(64px, 30vh, 360px);
+    font-size: clamp(64px, min(27vh, 24vw), 320px);
     font-weight: 800; line-height: 1;
     letter-spacing: -.02em;
   }
@@ -87,51 +95,92 @@
   body.final .clock { color: var(--hot); animation: pulse 1s steps(2) infinite; }
   @keyframes pulse { 50% { opacity: .35; } }
 
-  .bar { height: 1.6vh; min-height: 8px; background: var(--panel); border-radius: 99px; overflow: hidden; }
+  .pause-badge {
+    position: absolute; right: 0; top: 0;
+    display: none;
+    font-size: clamp(20px, 5vh, 48px); font-weight: 800; letter-spacing: .15em;
+    color: var(--bg); background: var(--warn);
+    padding: .15em .6em; border-radius: 10px;
+  }
+  body.paused .pause-badge { display: block; }
+  body.paused .clock { opacity: .5; }
+
+  .bar { height: 1.4vh; min-height: 8px; background: var(--panel); border-radius: 99px; overflow: hidden; }
   .bar > div { height: 100%; width: 0; background: var(--zone); }
 
-  footer {
-    display: flex; gap: 2vw; align-items: baseline;
-    font-size: clamp(16px, 4.2vh, 48px);
+  .nextline {
+    display: flex; gap: 1.5vw; align-items: baseline;
+    font-size: clamp(16px, 3.8vh, 40px);
     color: var(--muted);
     white-space: nowrap; overflow: hidden;
   }
-  footer .next { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
-  footer .label { flex: none; }
+  .nextline .next { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 
-  .paused .clock { opacity: .45; }
-  #hint {
-    position: fixed; inset: 0;
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
-    pointer-events: none;
-    font-size: clamp(16px, 3.5vh, 36px); color: var(--muted);
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1.6fr 1fr 1fr;
+    gap: clamp(8px, 1.2vw, 16px);
   }
-  #hint > div { display: grid; place-items: center; border: 2px dashed #2a323c; margin: 6vh .5vw; border-radius: 12px; background: rgba(11,13,16,.6); }
-  #hint.hidden { display: none; }
+  .controls button {
+    height: var(--btn-h);
+    font-size: clamp(18px, 3.4vh, 32px); font-weight: 700;
+    display: grid; place-items: center; line-height: 1.1;
+  }
+  .controls button small { display: block; font-size: .55em; font-weight: 500; color: var(--muted); }
+  .controls #btnPlay { background: #12324a; border-color: var(--accent); font-size: clamp(24px, 4.5vh, 44px); }
+  body.paused .controls #btnPlay { background: #3a2a06; border-color: var(--warn); }
 
-  #editor {
+  #toast {
+    position: fixed; left: 50%; top: 12vh; transform: translateX(-50%);
+    background: #f2f4f7; color: #0b0d10;
+    font-size: clamp(18px, 4vh, 36px); font-weight: 700;
+    padding: .4em 1em; border-radius: 12px;
+    opacity: 0; transition: opacity .2s; pointer-events: none;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+
+  .overlay {
     position: fixed; inset: 0; background: var(--bg);
-    display: none; flex-direction: column; gap: 1vh; padding: 2vh 2vw;
+    display: none; flex-direction: column; gap: 1vh; padding: 1.5vh 1.5vw;
   }
-  #editor.open { display: flex; }
+  .overlay.open { display: flex; }
+  .overlay .row { display: flex; gap: 1vw; flex-wrap: wrap; align-items: center; }
+  .overlay .row button, .overlay .row label {
+    min-height: 64px; padding: 0 1.2em;
+    font-size: 20px; display: inline-flex; align-items: center;
+    color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: 14px;
+  }
+  .overlay .row h2 { margin: 0 0 0 1vw; font-size: 24px; flex: 1; }
+
+  #list .items { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 2vh; }
+  #list .items button {
+    min-height: 84px; width: 100%;
+    display: grid; grid-template-columns: 3em 1fr auto auto; gap: 1em; align-items: center;
+    text-align: left; padding: 0 1em; font-size: clamp(18px, 3.2vh, 30px);
+    border-left: 12px solid var(--z, var(--accent));
+  }
+  #list .items button.current { border-color: var(--text); border-left-color: var(--z, var(--accent)); background: #1e2833; }
+  #list .items .n { color: var(--muted); }
+  #list .items .d { color: var(--muted); font-size: .8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #list .items .t { font-variant-numeric: tabular-nums; }
+  #list .items .at { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .8em; }
+
   #editor textarea {
     flex: 1; width: 100%;
     background: var(--panel); color: var(--text);
-    border: 1px solid #2a323c; border-radius: 8px;
+    border: 2px solid var(--line); border-radius: 12px;
     font: 18px/1.5 ui-monospace, "Roboto Mono", monospace;
     padding: 1em;
+    -webkit-user-select: text; user-select: text;
   }
-  #editor .row { display: flex; gap: 1vw; flex-wrap: wrap; }
-  #editor button, #editor label {
-    font: 18px system-ui, sans-serif; color: var(--text);
-    background: var(--panel); border: 1px solid #2a323c; border-radius: 8px;
-    padding: .5em 1em;
-  }
-  #editor .err { color: var(--hot); font-size: 16px; }
+  #editor .err { color: var(--hot); font-size: 18px; }
 
   @media (orientation: portrait) {
     main { grid-template-columns: 1fr; align-content: center; }
     .clock { font-size: clamp(64px, 22vw, 300px); }
+    .controls { grid-template-columns: repeat(3, 1fr); }
+    .controls #btnPlay { grid-column: span 3; order: -1; }
   }
 </style>
 </head>
@@ -144,7 +193,8 @@
     <button id="btnPlan" type="button">Plan</button>
     <button id="btnFull" type="button">Vollbild</button>
   </header>
-  <main id="stage">
+  <main>
+    <div class="pause-badge">PAUSE</div>
     <div class="seg">
       <div class="name" id="name"></div>
       <div class="details" id="details"></div>
@@ -152,19 +202,32 @@
     <div class="clock" id="clock">0:00</div>
   </main>
   <div class="bar"><div id="bar"></div></div>
-  <footer>
-    <span class="label">Danach:</span>
+  <div class="nextline">
+    <span>Danach:</span>
     <span class="next" id="next"></span>
-  </footer>
+  </div>
+  <div class="controls">
+    <button id="btnUndo" type="button">↶<small>rückgängig</small></button>
+    <button id="btnMinus" type="button">−30<small>Sek.</small></button>
+    <button id="btnPlus" type="button">+30<small>Sek.</small></button>
+    <button id="btnPrev" type="button">◀<small>zurück</small></button>
+    <button id="btnPlay" type="button">Start</button>
+    <button id="btnNext" type="button">▶<small>weiter</small></button>
+    <button id="btnList" type="button">☰<small>Liste</small></button>
+  </div>
 </div>
 
-<div id="hint">
-  <div>&larr; zurück</div>
-  <div>Start / Pause</div>
-  <div>weiter &rarr;</div>
+<div id="toast"></div>
+
+<div id="list" class="overlay">
+  <div class="row">
+    <button id="listClose" type="button">Schließen</button>
+    <h2>Springen zu …</h2>
+  </div>
+  <div class="items" id="listItems"></div>
 </div>
 
-<div id="editor">
+<div id="editor" class="overlay">
   <div class="row">
     <button id="edApply" type="button">Übernehmen</button>
     <label>Datei öffnen <input id="edFile" type="file" accept=".txt,.md,text/plain" hidden></label>
@@ -191,7 +254,16 @@ const DEMO = `Titel: Berg und Sprint (Demo)
 0:30  Sprint | alles raus | 110+ RPM | Z5
 4:00  Cool-down | sitzend, leicht | Dehnen am Rad | Z1`;
 
-const STORE_KEY = 'cycling-plan:text';
+const PLAN_KEY = 'cycling-plan:text';
+const RUN_KEY = 'cycling-plan:run';
+const STEP = 30000;
+const RESTART_WINDOW = 3000;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
 
 function parseDuration(s) {
   if (/^\d+:\d{1,2}$/.test(s)) {
@@ -229,34 +301,139 @@ function fmt(ms) {
 }
 
 const $ = id => document.getElementById(id);
-const state = { plan: null, idx: 0, left: 0, running: false, last: 0 };
 
-function load(text) {
+// segMs: Länge des laufenden Abschnitts inklusive ±30-Korrekturen
+const state = { plan: null, text: '', idx: 0, left: 0, segMs: 0, running: false, last: 0 };
+const undoStack = [];
+
+function enter(idx) {
+  state.idx = idx;
+  state.segMs = state.plan.segments[idx].ms;
+  state.left = state.segMs;
+}
+
+function finished() {
+  return state.idx === state.plan.segments.length - 1 && state.left <= 0;
+}
+
+// Zeit abziehen und dabei über Abschnittsgrenzen weiterlaufen
+function elapse(ms) {
+  state.left -= ms;
+  while (state.left <= 0) {
+    if (state.idx + 1 >= state.plan.segments.length) {
+      state.left = 0;
+      state.running = false;
+      keepAwake(false);
+      break;
+    }
+    const over = -state.left;
+    enter(state.idx + 1);
+    state.left -= over;
+  }
+}
+
+function load(text, resume) {
   const plan = parsePlan(text);
   if (plan.errors.length) return plan.errors;
   state.plan = plan;
-  state.idx = 0;
-  state.left = plan.segments[0].ms;
+  state.text = text;
   state.running = false;
-  try { localStorage.setItem(STORE_KEY, text); } catch (e) {}
+  undoStack.length = 0;
+  enter(0);
+  store.set(PLAN_KEY, text);
+  if (resume) restoreRun(); else store.del(RUN_KEY);
   render();
   return [];
 }
 
-function go(delta) {
-  const n = state.plan.segments.length;
-  const target = state.idx + delta;
-  if (target < 0) { state.left = state.plan.segments[0].ms; render(); return; }
-  if (target >= n) { state.running = false; state.left = 0; render(); return; }
-  state.idx = target;
-  state.left = state.plan.segments[target].ms;
+function saveRun() {
+  store.set(RUN_KEY, JSON.stringify({
+    len: state.text.length, idx: state.idx, left: state.left, segMs: state.segMs,
+    running: state.running, at: Date.now(),
+  }));
+}
+
+function restoreRun() {
+  let run = null;
+  try { run = JSON.parse(store.get(RUN_KEY)); } catch (e) {}
+  if (!run || run.len !== state.text.length || run.idx >= state.plan.segments.length) return;
+  state.idx = run.idx;
+  state.segMs = run.segMs;
+  state.left = run.left;
+  if (run.running) {
+    state.running = true;
+    elapse(Date.now() - run.at);
+    keepAwake(state.running);
+    toast('Lauf fortgesetzt');
+  }
+}
+
+// Jede Bedienaktion ist rückgängig zu machen
+function act(label, fn) {
+  undoStack.push({ idx: state.idx, left: state.left, segMs: state.segMs, running: state.running, label });
+  if (undoStack.length > 50) undoStack.shift();
+  fn();
+  toast(label);
+  saveRun();
   render();
+}
+
+function undo() {
+  const h = undoStack.pop();
+  if (!h) return;
+  Object.assign(state, { idx: h.idx, left: h.left, segMs: h.segMs, running: h.running });
+  keepAwake(state.running);
+  toast(`Rückgängig: ${h.label}`);
+  saveRun();
+  render();
+}
+
+function adjust(delta) {
+  act(delta > 0 ? '+30 Sek.' : '−30 Sek.', () => {
+    if (delta > 0) {
+      state.left += delta;
+      state.segMs += delta;
+    } else {
+      const cut = Math.min(-delta, Math.max(0, state.left - 1000));
+      state.left -= cut;
+      state.segMs -= cut;
+    }
+  });
+}
+
+function prev() {
+  const elapsed = state.segMs - state.left;
+  if (elapsed > RESTART_WINDOW || state.idx === 0) {
+    act('Abschnitt neu', () => enter(state.idx));
+  } else {
+    act('Zurück', () => enter(state.idx - 1));
+  }
+}
+
+function next() {
+  if (state.idx + 1 >= state.plan.segments.length) {
+    act('Ende', () => { state.left = 0; state.running = false; keepAwake(false); });
+    return;
+  }
+  act('Weiter', () => enter(state.idx + 1));
+}
+
+function jump(i) {
+  act(`Sprung zu ${i + 1}`, () => enter(i));
+}
+
+function togglePlay() {
+  act(state.running ? 'Pause' : 'Start', () => {
+    if (finished()) enter(0);
+    state.running = !state.running;
+    keepAwake(state.running);
+  });
 }
 
 function render() {
   const { plan, idx } = state;
   const seg = plan.segments[idx];
-  const next = plan.segments[idx + 1];
+  const nextSeg = plan.segments[idx + 1];
   const restMs = state.left + plan.segments.slice(idx + 1).reduce((a, s) => a + s.ms, 0);
 
   $('title').textContent = plan.title;
@@ -265,8 +442,13 @@ function render() {
   $('name').textContent = seg.name;
   $('details').replaceChildren(...seg.details.map(d => Object.assign(document.createElement('div'), { textContent: d })));
   $('clock').textContent = fmt(state.left);
-  $('bar').style.width = `${100 * (1 - state.left / seg.ms)}%`;
-  $('next').textContent = next ? `${next.name}${next.details.length ? ' · ' + next.details.join(' · ') : ''} (${fmt(next.ms)})` : 'Ende';
+  $('bar').style.width = `${Math.min(100, 100 * (1 - state.left / state.segMs))}%`;
+  $('next').textContent = nextSeg
+    ? `${nextSeg.name}${nextSeg.details.length ? ' · ' + nextSeg.details.join(' · ') : ''} (${fmt(nextSeg.ms)})`
+    : 'Ende';
+
+  $('btnPlay').textContent = state.running ? 'Pause' : (finished() ? 'Neu' : 'Start');
+  $('btnUndo').disabled = undoStack.length === 0;
 
   document.body.style.setProperty('--zone', seg.zone ? `var(--${seg.zone})` : 'var(--accent)');
   document.body.classList.toggle('paused', !state.running);
@@ -274,23 +456,24 @@ function render() {
   document.body.classList.toggle('final', state.running && state.left <= 3000 && state.left > 0);
 }
 
+let lastSave = 0;
 function tick(now) {
   if (state.running) {
-    state.left -= now - state.last;
-    if (state.left <= 0) {
-      const over = -state.left;
-      if (state.idx + 1 < state.plan.segments.length) {
-        state.idx += 1;
-        state.left = state.plan.segments[state.idx].ms - over;
-      } else {
-        state.left = 0;
-        state.running = false;
-      }
-    }
+    elapse(now - state.last);
+    if (now - lastSave > 1000) { saveRun(); lastSave = now; }
     render();
   }
   state.last = now;
   requestAnimationFrame(tick);
+}
+
+let toastTimer = 0;
+function toast(text) {
+  const el = $('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
 }
 
 let wakeLock = null;
@@ -306,45 +489,59 @@ async function keepAwake(on) {
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && state.running) keepAwake(true);
+  if (document.visibilityState === 'hidden') saveRun();
 });
 
-function toggleRun() {
-  if (state.left <= 0 && state.idx === state.plan.segments.length - 1) {
-    state.idx = 0;
-    state.left = state.plan.segments[0].ms;
-  }
-  state.running = !state.running;
-  keepAwake(state.running);
-  render();
+function openList() {
+  let at = 0;
+  const items = state.plan.segments.map((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    if (i === state.idx) b.className = 'current';
+    if (s.zone) b.style.setProperty('--z', `var(--${s.zone})`);
+    b.innerHTML = '<span class="n"></span><span><span class="nm"></span><div class="d"></div></span><span class="t"></span><span class="at"></span>';
+    b.querySelector('.n').textContent = i + 1;
+    b.querySelector('.nm').textContent = s.name;
+    b.querySelector('.d').textContent = s.details.join(' · ');
+    b.querySelector('.t').textContent = fmt(s.ms);
+    b.querySelector('.at').textContent = `ab ${fmt(at)}`;
+    at += s.ms;
+    b.addEventListener('click', () => { $('list').classList.remove('open'); jump(i); });
+    return b;
+  });
+  $('listItems').replaceChildren(...items);
+  $('list').classList.add('open');
+  $('listItems').querySelector('.current')?.scrollIntoView({ block: 'center' });
 }
 
-document.getElementById('app').addEventListener('click', e => {
-  if (e.target.closest('header')) return;
-  $('hint').classList.add('hidden');
-  const x = e.clientX / window.innerWidth;
-  if (x < 1 / 3) go(-1);
-  else if (x > 2 / 3) go(1);
-  else toggleRun();
-});
+function openEditor() {
+  $('edText').value = store.get(PLAN_KEY) || DEMO;
+  $('edErr').textContent = '';
+  $('editor').classList.add('open');
+}
+
+$('btnUndo').addEventListener('click', undo);
+$('btnMinus').addEventListener('click', () => adjust(-STEP));
+$('btnPlus').addEventListener('click', () => adjust(STEP));
+$('btnPrev').addEventListener('click', prev);
+$('btnPlay').addEventListener('click', togglePlay);
+$('btnNext').addEventListener('click', next);
+$('btnList').addEventListener('click', openList);
+$('listClose').addEventListener('click', () => $('list').classList.remove('open'));
 
 $('btnFull').addEventListener('click', () => {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen?.().catch(() => {});
 });
 
-function openEditor() {
-  state.running = false; keepAwake(false); render();
-  let text = DEMO;
-  try { text = localStorage.getItem(STORE_KEY) || DEMO; } catch (e) {}
-  $('edText').value = text;
-  $('edErr').textContent = '';
-  $('editor').classList.add('open');
-}
-$('btnPlan').addEventListener('click', openEditor);
+$('btnPlan').addEventListener('click', () => {
+  if (state.running) togglePlay();
+  openEditor();
+});
 $('edClose').addEventListener('click', () => $('editor').classList.remove('open'));
 $('edDemo').addEventListener('click', () => { $('edText').value = DEMO; });
 $('edApply').addEventListener('click', () => {
-  const errs = load($('edText').value);
+  const errs = load($('edText').value, false);
   if (errs.length) { $('edErr').textContent = errs.join(' · '); return; }
   $('editor').classList.remove('open');
 });
@@ -354,9 +551,7 @@ $('edFile').addEventListener('change', async e => {
   e.target.value = '';
 });
 
-let initial = DEMO;
-try { initial = localStorage.getItem(STORE_KEY) || DEMO; } catch (e) {}
-if (load(initial).length) load(DEMO);
+if (load(store.get(PLAN_KEY) || DEMO, true).length) load(DEMO, false);
 requestAnimationFrame(now => { state.last = now; requestAnimationFrame(tick); });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {

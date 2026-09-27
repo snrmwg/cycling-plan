@@ -6,13 +6,20 @@ Zeigt den aktuellen Abschnitt groß mit Countdown, darunter den nächsten. Die l
 
 ## Bedienung
 
-- Mitte antippen: Start / Pause
-- Rechts antippen: nächster Abschnitt
-- Links antippen: vorheriger Abschnitt (im ersten: Abschnitt neu starten)
-- „Plan“: Plan bearbeiten, einfügen oder als Textdatei öffnen
-- „Vollbild“: Browserleiste ausblenden
+Eine feste Leiste mit großen Tasten, für verschwitzte Finger. Auf die Anzeige selbst zu tippen löst nichts aus.
 
-Der Plan bleibt im Browser gespeichert. Während der Countdown läuft, hält die Seite den Bildschirm wach, sofern der Browser das unterstützt.
+| Taste | Wirkung |
+|---|---|
+| ↶ rückgängig | nimmt die letzte Aktion zurück, beliebig oft |
+| −30 / +30 | verkürzt oder verlängert den laufenden Abschnitt, etwa wenn der Song abweicht |
+| ◀ zurück | startet den Abschnitt neu; in den ersten 3 Sekunden geht es zum vorherigen |
+| Start / Pause | groß in der Mitte; in der Pause steht ein gelbes PAUSE-Schild |
+| ▶ weiter | nächster Abschnitt |
+| ☰ Liste | alle Abschnitte mit Startzeit, antippen springt dorthin |
+
+Oben: „Plan“ zum Bearbeiten, Einfügen oder Laden einer Textdatei, „Vollbild“ blendet die Browserleiste aus.
+
+Der Lauf wird laufend gespeichert. Lädt der Browser neu, geht es an derselben Stelle weiter, die Zeit dazwischen wird abgezogen. Während der Countdown läuft, hält die Seite den Bildschirm wach, sofern der Browser das unterstützt.
 
 ## Planformat
 
