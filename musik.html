@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<title>Cycling-Plan Musik</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="icon" href="icon.svg" type="image/svg+xml" sizes="any">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #151a20;
+    --line: #2a323c;
+    --text: #f2f4f7;
+    --muted: #8a94a3;
+    --accent: #3fb6ff;
+    --warn: #ffb020;
+    --hot: #ff4d4d;
+    --z1: #a3aebd;
+    --z2: #3fb6ff;
+    --z3: #37d67a;
+    --z4: #ffb020;
+    --z5: #ff4d4d;
+    --zone: var(--accent);
+    --btn-h: clamp(72px, 12vh, 120px);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+  body.warn { --bg: #1d1605; }
+  body.final { --bg: #2a0b0b; }
+  body { transition: background-color .3s; }
+
+  #app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto auto;
+    padding: 1vh 1.5vw;
+    gap: 1.2vh;
+  }
+
+  header {
+    display: flex; align-items: center; gap: 1.5vw;
+    font-size: clamp(14px, 2.6vh, 26px);
+    color: var(--muted);
+  }
+  header .title { color: var(--text); font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header button { min-height: 52px; padding: 0 1em; font-size: inherit; }
+
+  button {
+    font: inherit; color: var(--text);
+    background: var(--panel); border: 2px solid var(--line); border-radius: 14px;
+    cursor: pointer;
+  }
+  button:active { background: #243040; }
+  button:disabled { opacity: .3; }
+
+  .song { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5vw; align-items: end; }
+  .songinfo { display: flex; align-items: baseline; gap: 1vw; font-size: clamp(18px, 3.6vh, 36px); margin-bottom: 1vh; }
+  .songinfo .sname { font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .songinfo .stime { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .songinfo .src { font-size: .55em; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: .1em .4em; }
+
+  /* Songverlauf wie in einer Musik-App, mit den Choreo-Abschnitten als Farbfelder */
+  .track {
+    position: relative;
+    height: clamp(40px, 7vh, 72px);
+    background: var(--panel);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .track .part { position: absolute; top: 0; bottom: 0; background: var(--z, var(--line)); opacity: .55; border-right: 2px solid var(--bg); }
+  .track .part.done { opacity: .25; }
+  .track .part.now { opacity: 1; }
+  .track .count { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: var(--text); }
+  .track .head { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; background: var(--text); border-radius: 3px; box-shadow: 0 0 0 2px var(--bg); }
+
+  #video { width: 360px; aspect-ratio: 16 / 9; background: #000; border-radius: 10px; overflow: hidden; }
+  #video iframe, #video > div { width: 100%; height: 100%; display: block; border: 0; }
+  #audioHint { display: none; color: var(--warn); font-size: clamp(16px, 2.6vh, 24px); font-weight: 700; }
+  body.hint #audioHint { display: block; }
+  body.local #video { display: none; }
+
+  main {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 3vw;
+    min-height: 0;
+  }
+  .seg { min-width: 0; }
+  .seg .name {
+    font-size: clamp(32px, 11vh, 130px);
+    font-weight: 800; line-height: 1.05;
+    color: var(--zone);
+    overflow-wrap: anywhere;
+  }
+  .seg .details {
+    margin-top: 1.2vh;
+    font-size: clamp(20px, 5vh, 60px);
+    font-weight: 600; line-height: 1.2;
+  }
+  .seg .details div + div { margin-top: .25em; }
+  body.count .seg .name { color: var(--bg); background: var(--text); display: inline-block; padding: 0 .25em; border-radius: 12px; }
+  .clock {
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(64px, min(24vh, 22vw), 300px);
+    font-weight: 800; line-height: 1;
+    letter-spacing: -.02em;
+  }
+  body.warn .clock { color: var(--warn); }
+  body.final .clock { color: var(--hot); animation: pulse 1s steps(2) infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  .pause-badge {
+    position: absolute; right: 0; top: 0;
+    display: none;
+    font-size: clamp(20px, 5vh, 48px); font-weight: 800; letter-spacing: .15em;
+    color: var(--bg); background: var(--warn);
+    padding: .15em .6em; border-radius: 10px;
+  }
+  body.paused .pause-badge { display: block; }
+  body.paused .clock { opacity: .5; }
+
+  .nextline {
+    display: flex; gap: 1.5vw; align-items: baseline;
+    font-size: clamp(16px, 3.8vh, 40px);
+    color: var(--muted);
+    white-space: nowrap; overflow: hidden;
+  }
+  .nextline .next { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1.6fr 1fr 1fr 1fr;
+    gap: clamp(8px, 1.2vw, 16px);
+  }
+  .controls button {
+    height: var(--btn-h);
+    font-size: clamp(18px, 3.4vh, 32px); font-weight: 700;
+    display: grid; place-items: center; line-height: 1.1;
+  }
+  .controls button small { display: block; font-size: .55em; font-weight: 500; color: var(--muted); }
+  .controls #btnPlay { background: #12324a; border-color: var(--accent); font-size: clamp(24px, 4.5vh, 44px); }
+  body.paused .controls #btnPlay { background: #3a2a06; border-color: var(--warn); }
+
+  #empty { display: none; font-size: clamp(20px, 4vh, 40px); color: var(--muted); }
+  body.noplan #empty { display: block; }
+  body.noplan main, body.noplan .song, body.noplan .nextline, body.noplan .controls { visibility: hidden; }
+
+  #toast {
+    position: fixed; left: 50%; top: 12vh; transform: translateX(-50%);
+    background: #f2f4f7; color: #0b0d10;
+    font-size: clamp(18px, 4vh, 36px); font-weight: 700;
+    padding: .4em 1em; border-radius: 12px;
+    opacity: 0; transition: opacity .2s; pointer-events: none;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+
+  .overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: none; flex-direction: column; gap: 1vh; padding: 1.5vh 1.5vw;
+  }
+  .overlay.open { display: flex; }
+  .overlay .row { display: flex; gap: 1vw; flex-wrap: wrap; align-items: center; }
+  .overlay .row button, .overlay .row label {
+    min-height: 64px; padding: 0 1.2em;
+    font-size: 20px; display: inline-flex; align-items: center;
+    color: var(--text); background: var(--panel); border: 2px solid var(--line); border-radius: 14px;
+  }
+  .overlay .row h2 { margin: 0 0 0 1vw; font-size: 24px; flex: 1; }
+  .overlay .info { color: var(--muted); font-size: 18px; }
+
+  .items { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 2vh; }
+  .items h3 { margin: 1.5vh 0 .3vh; font-size: clamp(18px, 3vh, 28px); }
+  .items h3.current { color: var(--accent); }
+  .items button {
+    min-height: 72px; width: 100%;
+    display: grid; grid-template-columns: 4em 1fr; gap: 1em; align-items: center;
+    text-align: left; padding: 0 1em; font-size: clamp(18px, 3vh, 28px);
+    border-left: 12px solid var(--z, var(--line));
+  }
+  .items button.current { border-color: var(--text); border-left-color: var(--z, var(--line)); background: #1e2833; }
+  .items .at { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .items .d { color: var(--muted); font-size: .8em; }
+
+  #songsList { overflow-y: auto; font-size: 20px; }
+  #songsList div { padding: .4em 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 2.5em 1fr 8em 8em; gap: 1em; }
+  #songsList .ok { color: var(--z3); }
+  #songsList .no { color: var(--muted); }
+
+  #editor textarea {
+    flex: 1; width: 100%;
+    background: var(--panel); color: var(--text);
+    border: 2px solid var(--line); border-radius: 12px;
+    font: 18px/1.5 ui-monospace, "Roboto Mono", monospace;
+    padding: 1em;
+    -webkit-user-select: text; user-select: text;
+  }
+  #editor .err { color: var(--hot); font-size: 18px; }
+
+  @media (orientation: portrait) {
+    .song { grid-template-columns: 1fr; }
+    #video { width: 100%; max-width: 480px; }
+    main { grid-template-columns: 1fr; align-content: center; }
+    .clock { font-size: clamp(64px, 22vw, 300px); }
+    .controls { grid-template-columns: repeat(3, 1fr); }
+    .controls #btnPlay { grid-column: span 3; order: -1; }
+  }
+</style>
+</head>
+<body class="paused">
+<div id="app">
+  <header>
+    <span class="title" id="title"></span>
+    <span id="pos"></span>
+    <span id="total"></span>
+    <button id="btnPlan" type="button">Plan</button>
+    <button id="btnTimer" type="button">Timer</button>
+    <button id="btnSongs" type="button">Songs</button>
+    <button id="btnFull" type="button">Vollbild</button>
+  </header>
+  <div class="song">
+    <div>
+      <div id="empty">Noch kein Plan. Über „Plan“ einfügen oder als Datei laden.</div>
+      <div class="songinfo">
+        <span class="sname" id="songName"></span>
+        <span class="src" id="src"></span>
+        <span class="stime" id="songTime"></span>
+      </div>
+      <div class="track" id="track"></div>
+    </div>
+    <div>
+      <div id="audioHint">Kein Ton? Einmal ins Video tippen.</div>
+      <div id="video"><div id="ytPlayer"></div></div>
+    </div>
+  </div>
+  <main>
+    <div class="pause-badge">PAUSE</div>
+    <div class="seg">
+      <div class="name" id="name"></div>
+      <div class="details" id="details"></div>
+    </div>
+    <div class="clock" id="clock">0:00</div>
+  </main>
+  <div class="nextline">
+    <span id="nextLabel">Danach:</span>
+    <span class="next" id="next"></span>
+  </div>
+  <div class="controls">
+    <button id="btnUndo" type="button">↶<small>rückgängig</small></button>
+    <button id="btnPrev" type="button">⏮<small>Song</small></button>
+    <button id="btnBack" type="button">−10<small>Sek.</small></button>
+    <button id="btnPlay" type="button">Start</button>
+    <button id="btnFwd" type="button">+10<small>Sek.</small></button>
+    <button id="btnNext" type="button">⏭<small>Song</small></button>
+    <button id="btnList" type="button">☰<small>Liste</small></button>
+  </div>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+<div id="toast"></div>
+
+<div id="list" class="overlay">
+  <div class="row">
+    <button id="listClose" type="button">Schließen</button>
+    <h2>Springen zu …</h2>
+  </div>
+  <div class="items" id="listItems"></div>
+</div>
+
+<div id="songs" class="overlay">
+  <div class="row">
+    <button id="songsClose" type="button">Schließen</button>
+    <label>Audiodateien wählen <input id="songsFile" type="file" accept="audio/*,.m4a,.mp3,.opus,.webm" multiple hidden></label>
+    <button id="songsClear" type="button">Lokale Dateien löschen</button>
+    <h2>Songs</h2>
+  </div>
+  <div class="info">Lokale Dateien spielen ohne Internet und haben Vorrang vor YouTube. Zuordnung über die YouTube-ID im Dateinamen oder über den Songtitel.</div>
+  <div id="songsList"></div>
+</div>
+
+<div id="editor" class="overlay">
+  <div class="row">
+    <button id="edApply" type="button">Übernehmen</button>
+    <label>Datei öffnen <input id="edFile" type="file" accept=".txt,.md,text/plain" hidden></label>
+    <button id="edClose" type="button">Abbrechen</button>
+  </div>
+  <div class="err" id="edErr"></div>
+  <textarea id="edText" spellcheck="false"></textarea>
+</div>
+
+<script>
+const EXAMPLE = `Titel: Mein Plan
+
+# Pro Song eine Kopfzeile: ## Titel | YouTube-Link oder yt:ID | Dauer (optional)
+# Darunter Zeitmarken im Song: m:ss Abschnitt | Details | Z1 bis Z5
+# "einzählen" als Abschnitt wird hervorgehoben.
+
+## Song 2 – Blur | yt:SQrKCytWbj8 | 2:02
+0:00  SITZEN | Z2
+0:11  einzählen | → STEHEN
+0:14  STEHEN | Z4
+`;
+
+const PLAN_KEY = 'cycling-musik:plan';
+const POS_KEY = 'cycling-musik:pos';
+const SKIP = 10;
+const RESTART_WINDOW = 3;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+};
+
+function parseTime(s) {
+  const m = /^(\d+):(\d{1,2})$/.exec(s);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+function ytId(s) {
+  const m = /^yt:\s*([\w-]{11})$/.exec(s) || /(?:[?&]v=|youtu\.be\/|\/shorts\/)([\w-]{11})/.exec(s);
+  return m ? m[1] : null;
+}
+
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '');
+
+function parsePlan(text) {
+  let title = 'Cycling-Plan';
+  const songs = [];
+  const errors = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    const where = `Zeile ${i + 1}`;
+    if (!line || (line.startsWith('#') && !line.startsWith('##'))) return;
+    const t = line.match(/^titel:\s*(.+)$/i);
+    if (t) { title = t[1]; return; }
+    if (line.startsWith('##')) {
+      const [name, ...rest] = line.slice(2).split('|').map(p => p.trim());
+      const song = { title: name, yt: null, dur: null, cues: [] };
+      for (const p of rest) {
+        if (ytId(p)) song.yt = ytId(p);
+        else if (parseTime(p) !== null) song.dur = parseTime(p);
+        else errors.push(`${where}: "${p}" ist weder YouTube-Link noch Dauer`);
+      }
+      songs.push(song);
+      return;
+    }
+    const m = line.match(/^(\S+)\s+(.+)$/);
+    const at = m && parseTime(m[1]);
+    if (at === null || at === undefined) { errors.push(`${where}: "${line}" – Zeit im Song fehlt oder unlesbar`); return; }
+    const song = songs[songs.length - 1];
+    if (!song) { errors.push(`${where}: Zeitmarke vor dem ersten Song (## …)`); return; }
+    const prev = song.cues[song.cues.length - 1];
+    if (prev && at <= prev.at) { errors.push(`${where}: ${m[1]} liegt nicht nach der vorigen Marke`); return; }
+    const parts = m[2].split('|').map(p => p.trim()).filter(Boolean);
+    const zoneIdx = parts.findIndex(p => /^Z[1-5]$/i.test(p));
+    const zone = zoneIdx >= 0 ? parts.splice(zoneIdx, 1)[0].toLowerCase() : null;
+    const name = parts[0] || '';
+    song.cues.push({ at, name, details: parts.slice(1), zone, count: /^(einzählen|4[–-]3[–-]2[–-]1)/i.test(name) });
+  });
+  for (const s of songs) {
+    if (!s.cues.length || s.cues[0].at > 0) s.cues.unshift({ at: 0, name: s.title, details: [], zone: null, count: false });
+    if (!s.yt) s.key = norm(s.title);
+    else s.key = s.yt;
+  }
+  if (!songs.length && !errors.length) errors.push('Der Plan enthält keinen Song.');
+  return { title, songs, errors };
+}
+
+function fmt(sec, up) {
+  const s = Math.max(0, up ? Math.ceil(sec - 0.001) : Math.floor(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+const $ = id => document.getElementById(id);
+const audio = $('audio');
+
+// idx: laufender Song; kind: woher der Ton kommt ('local', 'yt' oder null)
+const state = { plan: null, text: '', idx: 0, kind: null, pendingAt: 0, playReqAt: 0 };
+const measured = new Map();
+const localUrls = new Map();
+const undoStack = [];
+
+/* ---------- lokale Audiodateien (IndexedDB) ---------- */
+
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('cycling-musik', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('audio');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbTx(mode, fn) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('audio', mode);
+    const out = fn(tx.objectStore('audio'));
+    tx.oncomplete = () => res(out);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function loadLocal() {
+  try {
+    const found = new Map();
+    await idbTx('readonly', st => {
+      st.openCursor().onsuccess = e => {
+        const c = e.target.result;
+        if (c) { found.set(c.key, c.value); c.continue(); }
+      };
+    });
+    localUrls.forEach(u => URL.revokeObjectURL(u));
+    localUrls.clear();
+    found.forEach((blob, key) => localUrls.set(key, URL.createObjectURL(blob)));
+  } catch (e) { /* ohne IndexedDB nur YouTube */ }
+}
+
+function matchSong(fileName) {
+  const n = norm(fileName);
+  const songs = state.plan?.songs || [];
+  return songs.find(s => s.yt && fileName.includes(s.yt))
+    || songs.find(s => n.includes(norm(s.title.split(/\s[–-]\s/)[0])));
+}
+
+async function addFiles(files) {
+  const hits = [];
+  for (const f of files) {
+    const song = matchSong(f.name);
+    if (!song) continue;
+    const blob = new Blob([await f.arrayBuffer()], { type: f.type || 'audio/mp4' });
+    await idbTx('readwrite', st => st.put(blob, song.key));
+    hits.push(song.title);
+  }
+  try { await navigator.storage?.persist?.(); } catch (e) {}
+  await loadLocal();
+  toast(`${hits.length} von ${files.length} Dateien zugeordnet`);
+  renderSongs();
+  if (!isPlaying()) loadSong(state.idx, songTime(), false);
+}
+
+/* ---------- YouTube ---------- */
+
+let yt = null;
+let ytReady = false;
+let ytFailed = false;
+
+window.onYouTubeIframeAPIReady = () => {
+  yt = new YT.Player('ytPlayer', {
+    width: '100%', height: '100%',
+    playerVars: { playsinline: 1, rel: 0, origin: location.origin },
+    events: {
+      onReady: () => {
+        ytReady = true;
+        if (state.plan && sourceFor(state.idx) === 'yt') loadSong(state.idx, state.pendingAt, false);
+      },
+      onStateChange: e => {
+        if (state.kind !== 'yt') return;
+        if (e.data === YT.PlayerState.ENDED) songEnded();
+      },
+      onError: e => toast(`YouTube-Fehler ${e.data}`),
+    },
+  });
+};
+const ytScript = document.createElement('script');
+ytScript.src = 'https://www.youtube.com/iframe_api';
+ytScript.onerror = () => { ytFailed = true; render(); };
+document.head.append(ytScript);
+
+/* ---------- Wiedergabe ---------- */
+
+function sourceFor(i) {
+  const s = state.plan.songs[i];
+  if (localUrls.has(s.key)) return 'local';
+  if (s.yt && !ytFailed) return 'yt';
+  return null;
+}
+
+function songTime() {
+  if (state.kind === 'local') return audio.currentTime || 0;
+  if (state.kind === 'yt' && ytReady && yt.getVideoData?.()?.video_id === state.plan.songs[state.idx].yt) {
+    return yt.getCurrentTime() || 0;
+  }
+  return state.pendingAt;
+}
+
+function songDur(i = state.idx) {
+  const s = state.plan.songs[i];
+  if (i === state.idx) {
+    const d = state.kind === 'local' ? audio.duration : (ytReady && state.kind === 'yt' ? yt.getDuration() : 0);
+    if (d && isFinite(d)) measured.set(s.key, d);
+  }
+  return measured.get(s.key) || s.dur || s.cues[s.cues.length - 1].at + 30;
+}
+
+function isPlaying() {
+  if (state.kind === 'local') return !audio.paused;
+  if (state.kind === 'yt' && ytReady) {
+    const st = yt.getPlayerState();
+    return st === YT.PlayerState.PLAYING || st === YT.PlayerState.BUFFERING;
+  }
+  return false;
+}
+
+function stopAll() {
+  audio.pause();
+  if (ytReady && yt.getPlayerState() === YT.PlayerState.PLAYING) yt.pauseVideo();
+}
+
+function loadSong(i, at, play) {
+  const song = state.plan.songs[i];
+  const kind = sourceFor(i);
+  const sameYt = kind === 'yt' && state.kind === 'yt' && ytReady && yt.getVideoData?.()?.video_id === song.yt;
+  const sameLocal = kind === 'local' && state.kind === 'local' && state.idx === i;
+  if (!sameYt && !sameLocal) stopAll();
+  state.idx = i;
+  state.kind = kind;
+  state.pendingAt = at;
+  if (kind === 'local') {
+    const url = localUrls.get(song.key);
+    if (audio.src !== url) audio.src = url;
+    const go = () => { audio.currentTime = at; if (play) audio.play().catch(() => toast('Wiedergabe blockiert')); };
+    if (audio.readyState >= 1) go(); else audio.addEventListener('loadedmetadata', go, { once: true });
+  } else if (kind === 'yt' && ytReady) {
+    if (sameYt) {
+      yt.seekTo(at, true);
+      if (play) yt.playVideo();
+    } else if (play) {
+      yt.loadVideoById({ videoId: song.yt, startSeconds: at });
+    } else {
+      yt.cueVideoById({ videoId: song.yt, startSeconds: at });
+    }
+    if (play) state.playReqAt = Date.now();
+  } else if (!kind) {
+    toast('Kein Ton: offline und keine lokale Datei');
+  }
+  savePos();
+  render();
+}
+
+function play() {
+  if (state.kind === 'local') { audio.play().catch(() => toast('Wiedergabe blockiert')); return; }
+  if (state.kind === 'yt') {
+    if (!ytReady) { toast('YouTube lädt noch'); return; }
+    const vid = yt.getVideoData?.()?.video_id;
+    if (vid !== state.plan.songs[state.idx].yt) loadSong(state.idx, state.pendingAt, true);
+    else { yt.playVideo(); state.playReqAt = Date.now(); }
+    return;
+  }
+  toast('Kein Ton: offline und keine lokale Datei');
+}
+
+function pause() {
+  if (state.kind === 'local') audio.pause();
+  else if (state.kind === 'yt' && ytReady) yt.pauseVideo();
+  state.pendingAt = songTime();
+  savePos();
+}
+
+function songEnded() {
+  if (state.idx + 1 < state.plan.songs.length) loadSong(state.idx + 1, 0, true);
+  else { toast('Ende'); render(); }
+}
+audio.addEventListener('ended', songEnded);
+
+/* ---------- Bedienung ---------- */
+
+// Jeder Sprung ist rückgängig zu machen
+function act(label, fn) {
+  undoStack.push({ idx: state.idx, at: songTime(), label });
+  if (undoStack.length > 50) undoStack.shift();
+  fn();
+  toast(label);
+  render();
+}
+
+function undo() {
+  const h = undoStack.pop();
+  if (!h) return;
+  loadSong(h.idx, h.at, isPlaying());
+  toast(`Rückgängig: ${h.label}`);
+}
+
+function seek(at) {
+  loadSong(state.idx, Math.max(0, Math.min(at, songDur() - 1)), isPlaying());
+}
+
+function prevSong() {
+  if (songTime() > RESTART_WINDOW || state.idx === 0) act('Song neu', () => seek(0));
+  else act('Voriger Song', () => loadSong(state.idx - 1, 0, isPlaying()));
+}
+
+function nextSong() {
+  if (state.idx + 1 >= state.plan.songs.length) return;
+  act('Nächster Song', () => loadSong(state.idx + 1, 0, isPlaying()));
+}
+
+function jump(i, at) {
+  act(`Sprung zu ${fmt(at)}`, () => (i === state.idx ? seek(at) : loadSong(i, at, isPlaying())));
+}
+
+function togglePlay() {
+  if (isPlaying()) pause(); else play();
+  setTimeout(render, 50);
+}
+
+/* ---------- Anzeige ---------- */
+
+function cueIndex(song, t) {
+  let k = 0;
+  while (k + 1 < song.cues.length && song.cues[k + 1].at <= t) k++;
+  return k;
+}
+
+let trackKey = '';
+function renderTrack(song, dur, k, t) {
+  const key = `${state.idx}:${Math.round(dur)}:${k}`;
+  if (key !== trackKey) {
+    trackKey = key;
+    const els = song.cues.map((c, j) => {
+      const end = j + 1 < song.cues.length ? song.cues[j + 1].at : dur;
+      const el = document.createElement('div');
+      el.className = c.count ? 'count' : `part${j < k ? ' done' : j === k ? ' now' : ''}`;
+      el.style.left = `${100 * c.at / dur}%`;
+      if (!c.count) {
+        el.style.width = `${100 * (end - c.at) / dur}%`;
+        if (c.zone) el.style.setProperty('--z', `var(--${c.zone})`);
+      }
+      return el;
+    });
+    const head = document.createElement('div');
+    head.className = 'head';
+    head.id = 'head';
+    $('track').replaceChildren(...els, head);
+  }
+  $('head').style.left = `${Math.min(100, 100 * t / dur)}%`;
+}
+
+function render() {
+  const { plan } = state;
+  document.body.classList.toggle('noplan', !plan);
+  if (!plan) return;
+  const song = plan.songs[state.idx];
+  const t = songTime();
+  const dur = songDur();
+  const k = cueIndex(song, t);
+  const cue = song.cues[k];
+  const nextCue = song.cues[k + 1];
+  const left = (nextCue ? nextCue.at : dur) - t;
+  const playing = isPlaying();
+
+  let rest = dur - t;
+  for (let i = state.idx + 1; i < plan.songs.length; i++) rest += songDur(i);
+
+  $('title').textContent = plan.title;
+  $('pos').textContent = `Song ${state.idx + 1}/${plan.songs.length}`;
+  $('total').textContent = `noch ${fmt(rest)}`;
+  $('songName').textContent = song.title;
+  $('songTime').textContent = `${fmt(t)} / ${fmt(dur)}`;
+  $('src').textContent = state.kind === 'local' ? 'lokal' : state.kind === 'yt' ? 'YouTube' : 'kein Ton';
+  renderTrack(song, dur, k, t);
+
+  $('name').textContent = cue.name;
+  $('details').replaceChildren(...cue.details.map(d => Object.assign(document.createElement('div'), { textContent: d })));
+  $('clock').textContent = fmt(left, true);
+
+  if (nextCue) {
+    $('nextLabel').textContent = `Bei ${fmt(nextCue.at)}:`;
+    $('next').textContent = [nextCue.name, ...nextCue.details].join(' · ');
+  } else if (plan.songs[state.idx + 1]) {
+    const ns = plan.songs[state.idx + 1];
+    $('nextLabel').textContent = 'Nächster Song:';
+    $('next').textContent = `${ns.title} · ${[ns.cues[0].name, ...ns.cues[0].details].join(' · ')}`;
+  } else {
+    $('nextLabel').textContent = 'Danach:';
+    $('next').textContent = 'Ende';
+  }
+
+  $('btnPlay').textContent = playing ? 'Pause' : 'Start';
+  $('btnUndo').disabled = undoStack.length === 0;
+  $('btnPrev').disabled = false;
+  $('btnNext').disabled = state.idx + 1 >= plan.songs.length;
+
+  // Nach dem Start-Tipp spielt der YouTube-Player im WebView manchmal erst nach einem Tipp ins Video
+  // Ein blockierter Start puffert kurz und fällt dann zurück, erst PLAYING zählt
+  const started = state.kind === 'local' ? playing : ytReady && yt.getPlayerState() === YT.PlayerState.PLAYING;
+  if (started) state.playReqAt = 0;
+  const stuck = state.kind === 'yt' && state.playReqAt && Date.now() - state.playReqAt > 2500;
+  document.body.classList.toggle('hint', stuck);
+  document.body.classList.toggle('local', state.kind === 'local');
+
+  document.body.style.setProperty('--zone', cue.zone ? `var(--${cue.zone})` : 'var(--accent)');
+  document.body.classList.toggle('paused', !playing);
+  document.body.classList.toggle('count', cue.count);
+  document.body.classList.toggle('warn', playing && left <= 10 && left > 3);
+  document.body.classList.toggle('final', playing && left <= 3 && left > 0);
+}
+
+let lastSave = 0;
+let wasPlaying = false;
+setInterval(() => {
+  if (!state.plan) return;
+  const playing = isPlaying();
+  if (playing !== wasPlaying) { keepAwake(playing); wasPlaying = playing; }
+  if (playing && Date.now() - lastSave > 1000) { savePos(); lastSave = Date.now(); }
+  render();
+}, 100);
+
+function savePos() {
+  if (!state.plan) return;
+  store.set(POS_KEY, JSON.stringify({ len: state.text.length, idx: state.idx, at: songTime() }));
+}
+
+function load(text, resume) {
+  const plan = parsePlan(text);
+  if (plan.errors.length) return plan.errors;
+  stopAll();
+  state.plan = plan;
+  state.text = text;
+  undoStack.length = 0;
+  trackKey = '';
+  store.set(PLAN_KEY, text);
+  let pos = null;
+  try { pos = JSON.parse(store.get(POS_KEY)); } catch (e) {}
+  if (resume && pos && pos.len === text.length && pos.idx < plan.songs.length) loadSong(pos.idx, pos.at, false);
+  else loadSong(0, 0, false);
+  return [];
+}
+
+let toastTimer = 0;
+function toast(text) {
+  const el = $('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && !wakeLock && 'wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } else if (!on && wakeLock) {
+      await wakeLock.release();
+    }
+  } catch (e) { /* ohne Wake Lock: Bildschirm-Timeout in den Einstellungen hochsetzen */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isPlaying()) keepAwake(true);
+});
+
+function openList() {
+  const items = [];
+  state.plan.songs.forEach((s, i) => {
+    const h = document.createElement('h3');
+    h.textContent = `${i + 1}. ${s.title}`;
+    if (i === state.idx) h.className = 'current';
+    items.push(h);
+    const k = i === state.idx ? cueIndex(s, songTime()) : -1;
+    s.cues.forEach((c, j) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      if (j === k) b.className = 'current';
+      if (c.zone) b.style.setProperty('--z', `var(--${c.zone})`);
+      b.innerHTML = '<span class="at"></span><span><span class="nm"></span> <span class="d"></span></span>';
+      b.querySelector('.at').textContent = fmt(c.at);
+      b.querySelector('.nm').textContent = c.name;
+      b.querySelector('.d').textContent = c.details.join(' · ');
+      b.addEventListener('click', () => { $('list').classList.remove('open'); jump(i, c.at); });
+      items.push(b);
+    });
+  });
+  $('listItems').replaceChildren(...items);
+  $('list').classList.add('open');
+  $('listItems').querySelector('h3.current')?.scrollIntoView({ block: 'start' });
+}
+
+function renderSongs() {
+  const rows = (state.plan?.songs || []).map((s, i) => {
+    const r = document.createElement('div');
+    r.innerHTML = '<span></span><span></span><span></span><span></span>';
+    const [n, t, y, l] = r.children;
+    n.textContent = i + 1;
+    t.textContent = s.title;
+    y.textContent = s.yt ? 'YouTube' : '–';
+    y.className = s.yt && !ytFailed ? 'ok' : 'no';
+    l.textContent = localUrls.has(s.key) ? 'lokal' : 'keine Datei';
+    l.className = localUrls.has(s.key) ? 'ok' : 'no';
+    return r;
+  });
+  $('songsList').replaceChildren(...rows);
+}
+
+// Tipp auf den Songverlauf springt dorthin
+$('track').addEventListener('click', e => {
+  const r = $('track').getBoundingClientRect();
+  const at = songDur() * (e.clientX - r.left) / r.width;
+  act(`Sprung zu ${fmt(at)}`, () => seek(at));
+});
+
+$('btnUndo').addEventListener('click', undo);
+$('btnPrev').addEventListener('click', prevSong);
+$('btnBack').addEventListener('click', () => act('−10 Sek.', () => seek(songTime() - SKIP)));
+$('btnPlay').addEventListener('click', togglePlay);
+$('btnFwd').addEventListener('click', () => act('+10 Sek.', () => seek(songTime() + SKIP)));
+$('btnNext').addEventListener('click', nextSong);
+$('btnList').addEventListener('click', openList);
+$('listClose').addEventListener('click', () => $('list').classList.remove('open'));
+
+$('btnFull').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen?.().catch(() => {});
+});
+
+$('btnTimer').addEventListener('click', () => { if (isPlaying()) pause(); location.href = './'; });
+$('btnSongs').addEventListener('click', () => { renderSongs(); $('songs').classList.add('open'); });
+$('songsClose').addEventListener('click', () => $('songs').classList.remove('open'));
+$('songsFile').addEventListener('change', async e => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  if (files.length) await addFiles(files);
+});
+$('songsClear').addEventListener('click', async () => {
+  try { await idbTx('readwrite', st => st.clear()); } catch (e) {}
+  await loadLocal();
+  renderSongs();
+  if (state.plan && !isPlaying()) loadSong(state.idx, songTime(), false);
+  toast('Lokale Dateien gelöscht');
+});
+
+$('btnPlan').addEventListener('click', () => {
+  if (isPlaying()) pause();
+  $('edText').value = store.get(PLAN_KEY) || EXAMPLE;
+  $('edErr').textContent = '';
+  $('editor').classList.add('open');
+});
+$('edClose').addEventListener('click', () => $('editor').classList.remove('open'));
+$('edApply').addEventListener('click', () => {
+  const errs = load($('edText').value, false);
+  if (errs.length) { $('edErr').textContent = errs.join(' · '); return; }
+  $('editor').classList.remove('open');
+});
+$('edFile').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  if (f) $('edText').value = await f.text();
+  e.target.value = '';
+});
+
+loadLocal().then(() => {
+  const saved = store.get(PLAN_KEY);
+  if (saved && load(saved, true).length) state.plan = null;
+  render();
+});
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
