@@ -34,8 +34,8 @@ Den Plan kann man in Markor als `.txt` schreiben und über „Plan > Datei öffn
 
 ## Aufs Tablet
 
-```bash
-adb push index.html /sdcard/Download/cycling-plan.html
-```
+Läuft als installierbare Web-App über GitHub Pages: https://snrmwg.github.io/cycling-plan/
 
-Dann im Browser `file:///sdcard/Download/cycling-plan.html` öffnen.
+Einmal im Browser öffnen, dann „Zum Startbildschirm hinzufügen“. Ein Service Worker hält die Seite danach offline vor; eine neue Version ist beim übernächsten Start aktiv. Pläne liegen nur im Browser des Geräts (localStorage), nicht im Repo.
+
+Als lokale Datei (`file://`) geht es auf dem Tablet nicht: Der LineageOS-Browser hat keine Speicherberechtigung.
