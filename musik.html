@@ -635,7 +635,6 @@ function renderPhases(k) {
   const { flat, songs } = state.plan;
   const g = flat.findIndex(p => p.song === state.idx && p.k === k);
   if (phasesKey === String(g)) return;
-  phasesKey = String(g);
   const rows = [];
   for (let j = g - 1; j <= g + NEXT_PHASES; j++) {
     const p = flat[j];
@@ -655,7 +654,7 @@ function renderPhases(k) {
     row.querySelector('.at').textContent = fmt(p.at);
     const body = row.querySelector('.body');
     // Songwechsel nur an der ersten Zeile eines anderen Songs anzeigen
-    const before = j < g ? state.idx : flat[j - 1].song;
+    const before = j <= g ? state.idx : flat[j - 1].song;
     if (p.song !== state.idx && p.song !== before) {
       body.append(Object.assign(document.createElement('div'), { className: 'sg', textContent: `Song ${p.song + 1}: ${songs[p.song].title}` }));
     }
@@ -668,6 +667,7 @@ function renderPhases(k) {
     rows.push(row);
   }
   $('phases').replaceChildren(...rows);
+  phasesKey = String(g);
 }
 
 function render() {
