@@ -142,7 +142,7 @@
 
   .controls {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1.6fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1.6fr 1fr 1fr 1fr;
     gap: clamp(8px, 1.2vw, 16px);
   }
   .controls button {
@@ -252,7 +252,6 @@
     <div class="clock" id="clock">0:00</div>
   </main>
   <div class="controls">
-    <button id="btnUndo" type="button">↶<small>rückgängig</small></button>
     <button id="btnPrev" type="button">⏮<small>Song</small></button>
     <button id="btnBack" type="button">−10<small>Sek.</small></button>
     <button id="btnPlay" type="button">Start</button>
@@ -385,7 +384,6 @@ const audio = $('audio');
 const state = { plan: null, text: '', idx: 0, kind: null, pendingAt: 0, playReqAt: 0 };
 const measured = new Map();
 const localUrls = new Map();
-const undoStack = [];
 
 /* ---------- lokale Audiodateien (IndexedDB) ---------- */
 
@@ -570,20 +568,10 @@ audio.addEventListener('ended', songEnded);
 
 /* ---------- Bedienung ---------- */
 
-// Jeder Sprung ist rückgängig zu machen
 function act(label, fn) {
-  undoStack.push({ idx: state.idx, at: songTime(), label });
-  if (undoStack.length > 50) undoStack.shift();
   fn();
   toast(label);
   render();
-}
-
-function undo() {
-  const h = undoStack.pop();
-  if (!h) return;
-  loadSong(h.idx, h.at, isPlaying());
-  toast(`Rückgängig: ${h.label}`);
 }
 
 function seek(at) {
@@ -711,7 +699,6 @@ function render() {
   renderPhases(k);
 
   $('btnPlay').textContent = playing ? 'Pause' : 'Start';
-  $('btnUndo').disabled = undoStack.length === 0;
   $('btnPrev').disabled = false;
   $('btnNext').disabled = state.idx + 1 >= plan.songs.length;
 
@@ -751,7 +738,6 @@ function load(text, resume) {
   stopAll();
   state.plan = plan;
   state.text = text;
-  undoStack.length = 0;
   trackKey = '';
   phasesKey = '';
   store.set(PLAN_KEY, text);
@@ -835,7 +821,6 @@ $('track').addEventListener('click', e => {
   act(`Sprung zu ${fmt(at)}`, () => seek(at));
 });
 
-$('btnUndo').addEventListener('click', undo);
 $('btnPrev').addEventListener('click', prevSong);
 $('btnBack').addEventListener('click', () => act('−10 Sek.', () => seek(songTime() - SKIP)));
 $('btnPlay').addEventListener('click', togglePlay);
