@@ -1,6 +1,6 @@
 // Offline-Cache: erst aus dem Cache liefern, im Hintergrund aktualisieren.
 // Eine neue Version ist damit beim übernächsten Start aktiv.
-const CACHE = 'cycling-plan-v4';
+const CACHE = 'cycling-plan-v5';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
