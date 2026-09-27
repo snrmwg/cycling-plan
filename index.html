@@ -53,6 +53,7 @@
     font-size: clamp(14px, 2.6vh, 26px);
     color: var(--muted);
   }
+  header #ver { font-size: .7em; opacity: .6; }
   header .title { color: var(--text); font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header button { min-height: 52px; padding: 0 1em; font-size: inherit; }
 
@@ -188,6 +189,7 @@
 <div id="app">
   <header>
     <span class="title" id="title"></span>
+    <span id="ver">v4</span>
     <span id="pos"></span>
     <span id="total"></span>
     <button id="btnPlan" type="button">Plan</button>
@@ -346,26 +348,30 @@ function load(text, resume) {
   return [];
 }
 
+let mySaveAt = 0;
 function saveRun() {
+  mySaveAt = Date.now();
   store.set(RUN_KEY, JSON.stringify({
     len: state.text.length, idx: state.idx, left: state.left, segMs: state.segMs,
-    running: state.running, at: Date.now(),
+    running: state.running, at: mySaveAt,
   }));
 }
 
-function restoreRun() {
+// Übernimmt den gespeicherten Lauf. Der gespeicherte Stand gilt als
+// maßgeblich: Läuft die Anzeige in mehreren Tabs, schreibt nur der
+// sichtbare, und jeder Tab holt sich beim Sichtbarwerden diesen Stand.
+function restoreRun(quiet) {
   let run = null;
   try { run = JSON.parse(store.get(RUN_KEY)); } catch (e) {}
   if (!run || run.len !== state.text.length || run.idx >= state.plan.segments.length) return;
   state.idx = run.idx;
   state.segMs = run.segMs;
   state.left = run.left;
-  if (run.running) {
-    state.running = true;
-    elapse(Date.now() - run.at);
-    keepAwake(state.running);
-    toast('Lauf fortgesetzt');
-  }
+  state.running = run.running;
+  if (run.running) elapse(Date.now() - run.at);
+  state.last = Date.now();
+  keepAwake(state.running);
+  if (run.running && !quiet) toast('Lauf fortgesetzt');
 }
 
 // Jede Bedienaktion ist rückgängig zu machen
@@ -464,7 +470,7 @@ function tick() {
   const now = Date.now();
   if (state.running) {
     elapse(Math.max(0, now - state.last));
-    if (now - lastSave > 1000) { saveRun(); lastSave = now; }
+    if (now - lastSave > 1000 && document.visibilityState === 'visible') { saveRun(); lastSave = now; }
     render();
   }
   state.last = now;
@@ -492,8 +498,15 @@ async function keepAwake(on) {
   } catch (e) { /* ohne Wake Lock: Bildschirm-Timeout in den Einstellungen hochsetzen */ }
 }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && state.running) keepAwake(true);
-  if (document.visibilityState === 'hidden') saveRun();
+  if (document.visibilityState === 'hidden') { saveRun(); return; }
+  let run = null;
+  try { run = JSON.parse(store.get(RUN_KEY)); } catch (e) {}
+  // Nur übernehmen, wenn zuletzt ein anderer Tab gespeichert hat
+  if (run && run.at !== mySaveAt && store.get(PLAN_KEY) === state.text) {
+    restoreRun(true);
+    undoStack.length = 0;
+  }
+  render();
 });
 
 function openList() {
