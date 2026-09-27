@@ -843,6 +843,7 @@ $('songsFile').addEventListener('change', async e => {
   if (files.length) await addFiles(files);
 });
 $('songsClear').addEventListener('click', async () => {
+  if (!confirm('Alle lokalen Audiodateien löschen? Ohne sie braucht die Stunde Internet.')) return;
   try { await idbTx('readwrite', st => st.clear()); } catch (e) {}
   await loadLocal();
   renderSongs();
