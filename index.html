@@ -456,10 +456,14 @@ function render() {
   document.body.classList.toggle('final', state.running && state.left <= 3000 && state.left > 0);
 }
 
+// Uhrzeit statt performance.now: die monotone Uhr steht unter Android
+// im Tiefschlaf still, die Uhrzeit läuft weiter. Nach der Rückkehr aus dem
+// Hintergrund wird die ganze Zeit auf einmal abgezogen.
 let lastSave = 0;
-function tick(now) {
+function tick() {
+  const now = Date.now();
   if (state.running) {
-    elapse(now - state.last);
+    elapse(Math.max(0, now - state.last));
     if (now - lastSave > 1000) { saveRun(); lastSave = now; }
     render();
   }
@@ -552,7 +556,8 @@ $('edFile').addEventListener('change', async e => {
 });
 
 if (load(store.get(PLAN_KEY) || DEMO, true).length) load(DEMO, false);
-requestAnimationFrame(now => { state.last = now; requestAnimationFrame(tick); });
+state.last = Date.now();
+requestAnimationFrame(tick);
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
