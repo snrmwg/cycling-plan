@@ -190,10 +190,11 @@
 <div id="app">
   <header>
     <span class="title" id="title"></span>
-    <span id="ver">v5</span>
+    <span id="ver">v6</span>
     <span id="pos"></span>
     <span id="total"></span>
     <button id="btnPlan" type="button">Plan</button>
+    <button id="btnMusik" type="button">Musik</button>
     <button id="btnFull" type="button">Vollbild</button>
   </header>
   <main>
@@ -551,6 +552,8 @@ $('btnFull').addEventListener('click', () => {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen?.().catch(() => {});
 });
+
+$('btnMusik').addEventListener('click', () => { location.href = 'musik.html'; });
 
 $('btnPlan').addEventListener('click', () => {
   if (state.running) togglePlay();

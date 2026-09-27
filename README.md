@@ -39,6 +39,32 @@ Titel: Berg und Sprint
 
 Den Plan kann man in Markor als `.txt` schreiben und über „Plan > Datei öffnen“ laden.
 
+## Musik-Modus (`musik.html`)
+
+Die Seite spielt die Musik selbst ab. Die Zeit im Song ist die einzige Uhr: Pause, Spulen und Songwechsel wirken auf Musik und Choreo zugleich. Oben ein Songverlauf wie in einer Musik-App mit den Choreo-Abschnitten als Farbfelder, darunter groß der aktuelle Abschnitt und der Countdown bis zum nächsten Wechsel. Tipp auf den Songverlauf springt dorthin. Erreichbar über „Musik“ in der Timer-Ansicht.
+
+Planformat: pro Song eine Kopfzeile, darunter Zeitmarken im Song, wie sie in der Choreo stehen.
+
+```
+Titel: Ride or die #01
+
+## Beggin' – Måneskin | yt:ZWKpPDI1M-o | 3:32
+0:00  SITZEN | Intro 6×8 | Z2
+0:35  einzählen | → STEHEN
+0:39  STEHEN | 8×8 | Z4
+```
+
+- Kopfzeile: `## Titel | YouTube-Link oder yt:ID | Dauer`; Dauer ist optional, der Player misst sie
+- `einzählen` (oder `4–3–2–1`) als Abschnitt wird weiß hervorgehoben
+- Ohne Marke bei `0:00` beginnt der Song mit seinem Titel als Abschnitt
+
+Woher der Ton kommt:
+
+- **Lokale Datei**, wenn eine unter „Songs“ geladen ist. Läuft offline. Zuordnung über die YouTube-ID im Dateinamen (`Titel [ID].m4a`, wie yt-dlp sie benennt) oder über den Songtitel (wie NewPipe sie benennt). Die Dateien liegen in der IndexedDB des Browsers.
+- **YouTube**, sonst. Braucht Internet. Im WebView-Browser (Jelly) startet der Ton erst nach einem Tipp ins Video; danach steuert die Seite allein. Die Seite zeigt dann „Kein Ton? Einmal ins Video tippen.“
+
+Plan und Dateien gelten je Adresse: Was unter `localhost` geladen ist, fehlt unter GitHub Pages und umgekehrt.
+
 ## Aufs Tablet
 
 Läuft als installierbare Web-App über GitHub Pages: https://snrmwg.github.io/cycling-plan/
