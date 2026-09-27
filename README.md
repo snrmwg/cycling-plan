@@ -34,7 +34,7 @@ Titel: Berg und Sprint
 ```
 
 - Dauer als `m:ss` oder in Minuten (`4`, `2,5`)
-- `Z1` bis `Z5` färbt den Abschnitt (grau, blau, grün, gelb, rot)
+- `Z1` bis `Z5` färbt den Abschnitt (violett, blau, grün, gelb, rot)
 - `#` am Zeilenanfang ist ein Kommentar
 
 Den Plan kann man in Markor als `.txt` schreiben und über „Plan > Datei öffnen“ laden.
